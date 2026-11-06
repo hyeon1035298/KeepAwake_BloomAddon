@@ -32,8 +32,8 @@
           ],
           "name": { "ko": "기본 시간", "en": "Default time" },
           "about": {
-            "ko": "커피 아이콘을 눌러 켤 때 얼마나 켜 둘지. 오른쪽 클릭 창에서는 그때그때 고릅니다",
-            "en": "How long a click on the cup keeps it on. The right-click window picks a time for one session"
+            "ko": "커피 아이콘을 오른쪽 클릭해 켤 때 얼마나 켜 둘지. 클릭하면 뜨는 창에서는 그때그때 고릅니다",
+            "en": "How long a right-click on the cup keeps it on. The window a click opens picks a time for one session"
           }
         },
         {

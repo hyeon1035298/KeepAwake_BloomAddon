@@ -2,10 +2,10 @@
 
 [한국어](README.ko.md)
 
-An add-on for the [Bloom](https://github.com/hyeon1035298/Bloom) launcher that keeps the computer awake from the Windows 11 taskbar. A coffee cup sits next to the clock: click it and the computer stays awake, click again and it may sleep. While it is on, the cup is filled and steaming.
+An add-on for the [Bloom](https://github.com/hyeon1035298/Bloom) launcher that keeps the computer awake from the Windows 11 taskbar. A coffee cup sits next to the clock: right-click it and the computer stays awake, right-click again and it may sleep. While it is on, the cup is filled in the accent colour picked in Bloom and steams.
 
-- Click the cup to turn it on or off
-- Right-click it for a small window: until turned off, 30 minutes, 1 hour, 2 hours, or a number of minutes
+- Right-click the cup to turn it on or off at once
+- Click it for a small window: until turned off, 30 minutes, 1 hour, 2 hours, or a number of minutes
 - Keep the screen on too, or keep only the system awake and let the screen turn off as usual
 - The time left shows in the cup's tooltip and in the window
 - After Explorer restarts, a running session carries on with the time it had left
@@ -41,10 +41,10 @@ The mod reaches the taskbar's XAML through internal functions of `taskbar.dll`, 
 In Bloom, Settings › Add-ons › Coffee:
 
 - **Keep awake**: the screen too (the default), or the system only. A change applies at once to a running session.
-- **Default time**: how long a click keeps it on: until turned off (the default), 30 minutes, 1 hour, 2 hours or custom.
+- **Default time**: how long a right-click keeps it on: until turned off (the default), 30 minutes, 1 hour, 2 hours or custom.
 - **Custom time**: the minutes for a custom default time (45 to start with), and where the window's custom field starts.
 
-The window's picks apply to the session they start; the next click starts from these settings again. The light or dark look follows Bloom's theme, and the window's glass follows Bloom's glass effect.
+The window's picks apply to the session they start; the next right-click starts from these settings again. The light or dark look follows Bloom's theme, the window's glass follows Bloom's glass effect, and the colour of the cup and the switches follows Bloom's accent (read from Bloom's settings; without Bloom, the Windows accent).
 
 ## Build from source
 

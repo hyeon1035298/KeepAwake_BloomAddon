@@ -2,7 +2,7 @@
 // @id              keep-awake
 // @name            Coffee
 // @description     A coffee cup next to the taskbar clock keeps the computer and the screen awake
-// @version         0.1.0
+// @version         0.1.2
 // @author          Hyeon
 // @include         explorer.exe
 // @architecture    x86-64
@@ -17,10 +17,11 @@
 /*
 # Coffee
 
-A coffee cup next to the taskbar clock. Clicking it keeps the computer awake, and with
-it the screen if you like; clicking again lets it sleep. Right-clicking it opens a small
-window to pick how long: until turned off, 30 minutes, 1 hour, 2 hours or a number of
-minutes, and whether the screen stays on too.
+A coffee cup next to the taskbar clock. Right-clicking it keeps the computer awake, and
+with it the screen if you like; right-clicking again lets it sleep. Clicking it opens a
+small window to pick how long: until turned off, 30 minutes, 1 hour, 2 hours or a number
+of minutes, and whether the screen stays on too. While on, the cup is filled in the
+accent picked in Bloom and steams.
 
 The request is held by one thread of its own, so it ends with the mod. After Explorer
 restarts, a running session carries on with the time it had left.
@@ -38,7 +39,7 @@ restarts, a running session carries on with the time it had left.
     - system: 시스템만 깨우기
   - duration: always
     $name: 기본 시간
-    $description: 커피 아이콘을 눌러 켤 때 얼마나 켜 둘지
+    $description: 커피 아이콘을 오른쪽 클릭해 켤 때 얼마나 켜 둘지
     $options:
     - always: 끌 때까지
     - m30: 30분
@@ -90,6 +91,7 @@ restarts, a running session carries on with the time it had left.
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.Input.h>
 #include <winrt/Windows.UI.Text.h>
+#include <winrt/Windows.UI.ViewManagement.h>
 #include <winrt/Windows.UI.Xaml.Automation.h>
 #include <winrt/Windows.UI.Xaml.Controls.Primitives.h>
 #include <winrt/Windows.UI.Xaml.Controls.h>
@@ -240,16 +242,123 @@ Config ReadConfig() {
 // Look: light or dark and glass, as Bloom hands them to its add-ons
 // ============================================================================
 
-// Bloom's design tokens: zinc greys, one ink whose alpha makes every overlay,
-// and Bloom's rose as the accent (dark #FF7A9E, light #E04E78).
+// Bloom's design tokens: zinc greys and one ink whose alpha makes every overlay. The
+// accent is the one picked in Bloom (ReadAccent), rose until it is read.
 struct Palette {
     uint32_t win, pop, btn, btnHover, fg, muted, faint, ink, accent;
     double tintOpacity, tintLuminosity;
 };
-constexpr Palette kDark{0xFF18181B, 0xFF27272A, 0xFF3F3F46, 0xFF52525B, 0xFFECEDEE, 0xFFA1A1AA,
-                        0x99ECEDEE, 0x00FFFFFF, 0xFFFF7A9E, 0.75, 0.85};
-constexpr Palette kLight{0xFFF4F4F5, 0xFFFAFAFA, 0xFFFFFFFF, 0xFFF4F4F5, 0xFF11181C, 0xFF3F3F46,
-                         0xFF52525B, 0x00111111, 0xFFE04E78, 0.75, 0.9};
+Palette kDark{0xFF18181B, 0xFF27272A, 0xFF3F3F46, 0xFF52525B, 0xFFECEDEE, 0xFFA1A1AA,
+              0x99ECEDEE, 0x00FFFFFF, 0xFFFF7A9E, 0.75, 0.85};
+Palette kLight{0xFFF4F4F5, 0xFFFAFAFA, 0xFFFFFFFF, 0xFFF4F4F5, 0xFF11181C, 0xFF3F3F46,
+               0xFF52525B, 0x00111111, 0xFFE04E78, 0.75, 0.9};
+
+// ---- the accent ---------------------------------------------------------------
+// Bloom keeps its accent in its settings.json ("accent": a preset, or "custom" with
+// "accentCustom" #RRGGBB, the light theme's colour) and does not hand it to add-ons, so
+// it is read from there, with Bloom's own pairs. Without Bloom's settings the Windows
+// accent is used.
+
+struct AccentPair {
+    uint32_t dark, light;
+    bool operator==(const AccentPair&) const = default;
+};
+
+// HSL, as Bloom lifts a typed colour for the dark theme.
+void ToHsl(uint32_t argb, double& h, double& s, double& l) {
+    double r = BYTE(argb >> 16) / 255.0, g = BYTE(argb >> 8) / 255.0, b = BYTE(argb) / 255.0;
+    double hi = std::max({r, g, b}), lo = std::min({r, g, b}), d = hi - lo;
+    l = (hi + lo) / 2;
+    s = d == 0 ? 0 : d / (1 - std::fabs(2 * l - 1));
+    h = d == 0 ? 0 : hi == r ? 60 * std::fmod((g - b) / d + 6, 6) : hi == g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+}
+
+uint32_t FromHsl(double h, double s, double l) {
+    double c = (1 - std::fabs(2 * l - 1)) * s, x = c * (1 - std::fabs(std::fmod(h / 60, 2) - 1)), m = l - c / 2;
+    double r = 0, g = 0, b = 0;
+    int k = int(h / 60) % 6;
+    if (k == 0) r = c, g = x;
+    else if (k == 1) r = x, g = c;
+    else if (k == 2) g = c, b = x;
+    else if (k == 3) g = x, b = c;
+    else if (k == 4) r = x, b = c;
+    else r = c, b = x;
+    auto byte = [&](double v) { return uint32_t(std::lround(std::clamp(v + m, 0.0, 1.0) * 255)); };
+    return 0xFF000000u | byte(r) << 16 | byte(g) << 8 | byte(b);
+}
+
+std::optional<AccentPair> BloomAccent(const std::wstring& key, const std::wstring& custom) {
+    struct Preset {
+        PCWSTR key;
+        AccentPair pair;
+    };
+    static constexpr Preset kPresets[] = {
+        {L"rose", {0xFFFF7A9E, 0xFFE04E78}},      {L"lavender", {0xFFB49CFF, 0xFF7B5BDB}},
+        {L"sky", {0xFF72B6FF, 0xFF2F72D6}},       {L"mint", {0xFF5ED3AE, 0xFF168F6C}},
+        {L"tangerine", {0xFFFF9B5E, 0xFFD9652A}}, {L"lemon", {0xFFEDC94F, 0xFFA87C00}},
+        {L"gray", {0xFFE4E4E4, 0xFF2E2E2E}},
+    };
+    if (key == L"custom") {
+        std::wstring t = custom;
+        if (!t.empty() && t[0] == L'#') t.erase(0, 1);
+        if (t.size() != 6 || t.find_first_not_of(L"0123456789abcdefABCDEF") != std::wstring::npos) return std::nullopt;
+        uint32_t light = 0xFF000000u | uint32_t(wcstoul(t.c_str(), nullptr, 16));
+        double h, s, l;
+        ToHsl(light, h, s, l);
+        return AccentPair{FromHsl(h, s, std::max(l, std::min(0.86, l + 0.18))), light};
+    }
+    for (auto& p : kPresets)
+        if (key == p.key) return p.pair;
+    return std::nullopt;
+}
+
+std::wstring BloomSettingsPath() {
+    return KnownFolder(FOLDERID_RoamingAppData) + L"\\Bloom\\settings.json";
+}
+
+AccentPair WindowsAccent() {
+    try {
+        winrt::Windows::UI::ViewManagement::UISettings ui;
+        auto argb = [](winrt::Windows::UI::Color c) { return uint32_t(c.A) << 24 | c.R << 16 | c.G << 8 | c.B; };
+        return {argb(ui.GetColorValue(winrt::Windows::UI::ViewManagement::UIColorType::AccentLight2)),
+                argb(ui.GetColorValue(winrt::Windows::UI::ViewManagement::UIColorType::AccentDark1))};
+    } catch (...) {
+        return {0xFFFF7A9E, 0xFFE04E78};
+    }
+}
+
+AccentPair ReadAccent() {
+    if (auto text = ReadText(BloomSettingsPath(), 4 * 1024 * 1024)) {
+        std::wstring s = *text;
+        if (!s.empty() && s[0] == 0xFEFF) s.erase(0, 1);
+        wdj::JsonObject o{nullptr};
+        if (wdj::JsonObject::TryParse(s, o)) {
+            auto key = std::wstring(o.GetNamedString(L"accent", L"rose"));
+            auto custom = std::wstring(o.GetNamedString(L"accentCustom", L""));
+            return BloomAccent(key, custom).value_or(AccentPair{0xFFFF7A9E, 0xFFE04E78});
+        }
+    }
+    return WindowsAccent();
+}
+
+// Puts the accent into both palettes; true when it changed.
+bool ApplyAccent(const AccentPair& a) {
+    if (kDark.accent == a.dark && kLight.accent == a.light) return false;
+    kDark.accent = a.dark;
+    kLight.accent = a.light;
+    return true;
+}
+
+// Bloom's settings file is looked at again only when its time changed.
+FILETIME g_bloomSettingsTime{};
+bool RefreshAccent() {
+    WIN32_FILE_ATTRIBUTE_DATA data{};
+    FILETIME t{};
+    if (GetFileAttributesExW(BloomSettingsPath().c_str(), GetFileExInfoStandard, &data)) t = data.ftLastWriteTime;
+    if (!CompareFileTime(&t, &g_bloomSettingsTime) && (t.dwLowDateTime || t.dwHighDateTime)) return false;
+    g_bloomSettingsTime = t;
+    return ApplyAccent(ReadAccent());
+}
 
 struct Look {
     bool known = false;  // from Bloom; else the taskbar's own theme
@@ -750,7 +859,8 @@ std::wstring ModeName(bool display) {
 // The widget: a coffee cup, steaming and filled while on
 // ============================================================================
 
-constexpr double kW = 18, kH = 18, kStroke = 1.3;
+// 25:18 with a 1.3 line, the box and line of the brightness and memory-clean icons beside it.
+constexpr double kW = 25, kH = 18, kStroke = 1.3;
 constexpr PCWSTR kFont = L"Segoe UI, Malgun Gothic";  // Bloom's own pair
 
 winrt::Windows::UI::Text::FontWeight Weight(int weight) {
@@ -802,7 +912,9 @@ struct PathBuilder {
     }
 };
 
-// One drawing of the cup: a body, a handle on the right, a saucer and two wisps of steam.
+// One drawing of the cup: a body, a handle on the right, a saucer and, while on, steam.
+// The body spans the same height as the neighbours' screen and RAM module, the saucer sits
+// where their stands do.
 struct CupIcon {
     wuxc::Canvas canvas{nullptr};
     wuxs::Path body{nullptr}, handle{nullptr}, steam{nullptr};
@@ -812,31 +924,32 @@ struct CupIcon {
         canvas = wuxc::Canvas();
         canvas.Width(kW);
         canvas.Height(kH);
-        body = PathBuilder().Move(2.2, 6.6, true).Line(12.8, 6.6).Line(12.8, 10.6).Arc(9, 14.4, 3.8)
-                   .Line(6, 14.4).Arc(2.2, 10.6, 3.8).Path(kStroke);
-        handle = PathBuilder().Move(12.8, 8.1).Arc(12.8, 12.5, 2.2).Path(kStroke);
+        body = PathBuilder().Move(3.6, 4.2, true).Line(18.4, 4.2).Line(18.4, 10.2).Arc(14, 14.6, 4.4)
+                   .Line(8, 14.6).Arc(3.6, 10.2, 4.4).Path(kStroke);
+        handle = PathBuilder().Move(18.4, 6).Arc(18.4, 11.4, 2.7).Path(kStroke);
         steam = PathBuilder()
-                    .Move(6, 5).Curve(4.9, 4, 7.1, 2.9, 6, 1.4)
-                    .Move(9.2, 5).Curve(8.1, 4, 10.3, 2.9, 9.2, 1.4)
-                    .Path(1.1);
+                    .Move(8.6, 2.8).Curve(7.6, 2.1, 9.6, 1.2, 8.6, 0.2)
+                    .Move(13.4, 2.8).Curve(12.4, 2.1, 14.4, 1.2, 13.4, 0.2)
+                    .Path(kStroke);
         saucer = wuxs::Rectangle();
-        saucer.Width(14.6);
+        saucer.Width(18);
         saucer.Height(kStroke);
         saucer.RadiusX(kStroke / 2);
         saucer.RadiusY(kStroke / 2);
-        wuxc::Canvas::SetLeft(saucer, 0.8);
-        wuxc::Canvas::SetTop(saucer, 16.1);
+        wuxc::Canvas::SetLeft(saucer, 2.4);
+        wuxc::Canvas::SetTop(saucer, kH - 1.45 - kStroke / 2);
         for (wux::UIElement e : {wux::UIElement(steam), wux::UIElement(handle), wux::UIElement(body), wux::UIElement(saucer)})
             canvas.Children().Append(e);
     }
 
-    // Off: the outline only. On: filled in the accent, with steam.
+    // Off: the outline only, as the neighbours draw. On: the whole cup filled in the accent,
+    // steaming.
     void Paint(bool on, const Palette& c) {
-        auto ink = Brush(c.fg), accent = Brush(c.accent);
-        body.Stroke(on ? accent : ink);
-        body.Fill(on ? accent : Brush(0));
-        handle.Stroke(on ? accent : ink);
-        steam.Stroke(on ? accent : ink);
+        auto ink = Brush(on ? c.accent : c.fg);
+        body.Stroke(ink);
+        body.Fill(on ? ink : Brush(0));
+        handle.Stroke(ink);
+        steam.Stroke(ink);
         steam.Visibility(on ? wux::Visibility::Visible : wux::Visibility::Collapsed);
         saucer.Fill(ink);
     }
@@ -853,7 +966,7 @@ struct Widget {
 };
 std::vector<std::unique_ptr<Widget>> g_widgets;  // taskbar thread
 void TogglePanel(Widget& w);
-void OpenPanelFromMenu(Widget& w);
+void ToggleFromMenu();
 
 // ---- fitting the taskbar ----------------------------------------------------------
 // How the widget and its window sit on the taskbar, kept the same as the brightness and
@@ -924,13 +1037,13 @@ void ShowFlyout(Widget& w, const wuxc::Flyout& flyout) {
 std::wstring Tip() {
     std::wstring head = std::wstring(T(L"커피", L"Coffee")) + L": ";
     if (!g_s.on)
-        return head + T(L"꺼짐\n클릭하면 켭니다 · 오른쪽 클릭: 시간 고르기",
-                        L"off\nClick to turn on · Right-click: pick a time");
+        return head + T(L"꺼짐\n클릭: 시간과 방식 · 오른쪽 클릭: 켜기",
+                        L"off\nClick: time and mode · Right-click: turn on");
     int64_t left = Left();
     std::wstring when = left < 0 ? std::wstring(T(L"끌 때까지", L"until turned off"))
                                  : Format(T(L"%s 남음", L"%s left"), Duration(left).c_str());
     return head + ModeName(g_s.display) + L", " + when + L"\n" +
-           T(L"클릭하면 끕니다 · 오른쪽 클릭: 시간 고르기", L"Click to turn off · Right-click: pick a time");
+           T(L"클릭: 시간과 방식 · 오른쪽 클릭: 끄기", L"Click: time and mode · Right-click: turn off");
 }
 
 void PaintWidget(Widget& w, bool force) {
@@ -976,18 +1089,18 @@ std::unique_ptr<Widget> BuildWidget(HWND taskbar) {
         raw->hover = false;
         PaintWidget(*raw, true);
     });
-    w->root.Tapped([](auto&&, wux::Input::TappedRoutedEventArgs const& args) {
+    w->root.Tapped([raw](auto&&, wux::Input::TappedRoutedEventArgs const& args) {
         args.Handled(true);
-        Toggle();
+        TogglePanel(*raw);
     });
-    // The taskbar's own menu would come up on a right click; the window comes up instead.
-    w->root.ContextRequested([raw](auto&&, wux::Input::ContextRequestedEventArgs const& args) {
+    // A right click turns it on or off at once, instead of the taskbar's own menu.
+    w->root.ContextRequested([](auto&&, wux::Input::ContextRequestedEventArgs const& args) {
         args.Handled(true);
-        OpenPanelFromMenu(*raw);
+        ToggleFromMenu();
     });
-    w->root.RightTapped([raw](auto&&, wux::Input::RightTappedRoutedEventArgs const& args) {
+    w->root.RightTapped([](auto&&, wux::Input::RightTappedRoutedEventArgs const& args) {
         args.Handled(true);
-        OpenPanelFromMenu(*raw);
+        ToggleFromMenu();
     });
     return w;
 }
@@ -1662,11 +1775,11 @@ void TogglePanel(Widget& w) {
 }
 
 // A right click raises both ContextRequested and RightTapped; the second is the same press.
-void OpenPanelFromMenu(Widget& w) {
+void ToggleFromMenu() {
     uint64_t now = GetTickCount64();
     if (now - g_menuAt < 300) return;
     g_menuAt = now;
-    TogglePanel(w);
+    Toggle();
 }
 
 // ============================================================================
@@ -1685,6 +1798,10 @@ void UpdateTicker() {
 
 void Tick() {
     if (g_unloading) return;
+    if (RefreshAccent()) {
+        PaintWidgets(true);
+        RefreshPanel();
+    }
     PlaceWidgets();
 }
 
@@ -1695,6 +1812,7 @@ void Start() {
         return;
     }
     g_look = ReadLook();
+    RefreshAccent();
     g_config = ReadConfig();
     g_s.display = g_config.display;
     CreateFlyoutWindow();
