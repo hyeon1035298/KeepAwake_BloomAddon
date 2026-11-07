@@ -2,7 +2,7 @@
 // @id              keep-awake
 // @name            Coffee
 // @description     A coffee cup next to the taskbar clock keeps the computer and the screen awake
-// @version         0.1.2
+// @version         0.1.3
 // @author          Hyeon
 // @include         explorer.exe
 // @architecture    x86-64
@@ -859,8 +859,9 @@ std::wstring ModeName(bool display) {
 // The widget: a coffee cup, steaming and filled while on
 // ============================================================================
 
-// 25:18 with a 1.3 line, the box and line of the brightness and memory-clean icons beside it.
-constexpr double kW = 25, kH = 18, kStroke = 1.3;
+// The neighbours' line (1.3) and body height (0.95 to 14.25 of 18), with the box only as wide
+// as the cup's ink plus their 0.5 edge, so the space between the drawings matches theirs.
+constexpr double kW = 20, kH = 18, kStroke = 1.3;
 constexpr PCWSTR kFont = L"Segoe UI, Malgun Gothic";  // Bloom's own pair
 
 winrt::Windows::UI::Text::FontWeight Weight(int weight) {
@@ -924,19 +925,20 @@ struct CupIcon {
         canvas = wuxc::Canvas();
         canvas.Width(kW);
         canvas.Height(kH);
-        body = PathBuilder().Move(3.6, 4.2, true).Line(18.4, 4.2).Line(18.4, 10.2).Arc(14, 14.6, 4.4)
-                   .Line(8, 14.6).Arc(3.6, 10.2, 4.4).Path(kStroke);
-        handle = PathBuilder().Move(18.4, 6).Arc(18.4, 11.4, 2.7).Path(kStroke);
+        body = PathBuilder().Move(1.15, 0.95, true).Line(15.85, 0.95).Line(15.85, 10.05).Arc(11.65, 14.25, 4.2)
+                   .Line(5.35, 14.25).Arc(1.15, 10.05, 4.2).Path(kStroke);
+        handle = PathBuilder().Move(15.85, 3.3).Arc(15.85, 9.2, 2.95).Path(kStroke);
+        // Above the box, in the taskbar's room over the icon; the canvas does not clip.
         steam = PathBuilder()
-                    .Move(8.6, 2.8).Curve(7.6, 2.1, 9.6, 1.2, 8.6, 0.2)
-                    .Move(13.4, 2.8).Curve(12.4, 2.1, 14.4, 1.2, 13.4, 0.2)
+                    .Move(5.6, -0.9).Curve(4.5, -1.8, 6.7, -2.9, 5.6, -4.2)
+                    .Move(10.6, -0.9).Curve(9.5, -1.8, 11.7, -2.9, 10.6, -4.2)
                     .Path(kStroke);
         saucer = wuxs::Rectangle();
-        saucer.Width(18);
+        saucer.Width(16);
         saucer.Height(kStroke);
         saucer.RadiusX(kStroke / 2);
         saucer.RadiusY(kStroke / 2);
-        wuxc::Canvas::SetLeft(saucer, 2.4);
+        wuxc::Canvas::SetLeft(saucer, 0.5);
         wuxc::Canvas::SetTop(saucer, kH - 1.45 - kStroke / 2);
         for (wux::UIElement e : {wux::UIElement(steam), wux::UIElement(handle), wux::UIElement(body), wux::UIElement(saucer)})
             canvas.Children().Append(e);
@@ -1072,7 +1074,7 @@ std::unique_ptr<Widget> BuildWidget(HWND taskbar) {
     w->root = wuxc::Grid();
     w->root.Name(kWidgetName);
     w->root.Height(32);
-    w->root.Padding({6, 0, 6, 0});
+    w->root.Padding({5, 0, 5, 0});  // the memory-clean widget's sides
     w->root.Margin({2, 0, 2, 0});
     w->root.CornerRadius({4, 4, 4, 4});
     w->root.VerticalAlignment(wux::VerticalAlignment::Center);
