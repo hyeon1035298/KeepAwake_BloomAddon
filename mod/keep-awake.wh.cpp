@@ -2,7 +2,7 @@
 // @id              keep-awake
 // @name            Coffee
 // @description     A coffee cup next to the taskbar clock keeps the computer and the screen awake
-// @version         0.1.4
+// @version         0.1.5
 // @author          Hyeon
 // @include         explorer.exe
 // @architecture    x86-64
