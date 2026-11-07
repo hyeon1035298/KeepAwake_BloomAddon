@@ -2,7 +2,7 @@
 // @id              keep-awake
 // @name            Coffee
 // @description     A coffee cup next to the taskbar clock keeps the computer and the screen awake
-// @version         0.1.3
+// @version         0.1.4
 // @author          Hyeon
 // @include         explorer.exe
 // @architecture    x86-64
@@ -20,8 +20,8 @@
 A coffee cup next to the taskbar clock. Right-clicking it keeps the computer awake, and
 with it the screen if you like; right-clicking again lets it sleep. Clicking it opens a
 small window to pick how long: until turned off, 30 minutes, 1 hour, 2 hours or a number
-of minutes, and whether the screen stays on too. While on, the cup is filled in the
-accent picked in Bloom and steams.
+of minutes, and whether the screen stays on too. While on, the cup is filled with the
+accent picked in Bloom.
 
 The request is held by one thread of its own, so it ends with the mod. After Explorer
 restarts, a running session carries on with the time it had left.
@@ -856,7 +856,7 @@ std::wstring ModeName(bool display) {
 }
 
 // ============================================================================
-// The widget: a coffee cup, steaming and filled while on
+// The widget: a coffee cup, filled while on
 // ============================================================================
 
 // The neighbours' line (1.3) and body height (0.95 to 14.25 of 18), with the box only as wide
@@ -913,12 +913,11 @@ struct PathBuilder {
     }
 };
 
-// One drawing of the cup: a body, a handle on the right, a saucer and, while on, steam.
-// The body spans the same height as the neighbours' screen and RAM module, the saucer sits
-// where their stands do.
+// One drawing of the cup: a body, a handle on the right and a saucer, outlined like the
+// neighbours' screen and RAM module; while on, the cup is filled with the accent.
 struct CupIcon {
     wuxc::Canvas canvas{nullptr};
-    wuxs::Path body{nullptr}, handle{nullptr}, steam{nullptr};
+    wuxs::Path body{nullptr}, handle{nullptr};
     wuxs::Rectangle saucer{nullptr};
 
     void Build() {
@@ -928,11 +927,6 @@ struct CupIcon {
         body = PathBuilder().Move(1.15, 0.95, true).Line(15.85, 0.95).Line(15.85, 10.05).Arc(11.65, 14.25, 4.2)
                    .Line(5.35, 14.25).Arc(1.15, 10.05, 4.2).Path(kStroke);
         handle = PathBuilder().Move(15.85, 3.3).Arc(15.85, 9.2, 2.95).Path(kStroke);
-        // Above the box, in the taskbar's room over the icon; the canvas does not clip.
-        steam = PathBuilder()
-                    .Move(5.6, -0.9).Curve(4.5, -1.8, 6.7, -2.9, 5.6, -4.2)
-                    .Move(10.6, -0.9).Curve(9.5, -1.8, 11.7, -2.9, 10.6, -4.2)
-                    .Path(kStroke);
         saucer = wuxs::Rectangle();
         saucer.Width(16);
         saucer.Height(kStroke);
@@ -940,19 +934,16 @@ struct CupIcon {
         saucer.RadiusY(kStroke / 2);
         wuxc::Canvas::SetLeft(saucer, 0.5);
         wuxc::Canvas::SetTop(saucer, kH - 1.45 - kStroke / 2);
-        for (wux::UIElement e : {wux::UIElement(steam), wux::UIElement(handle), wux::UIElement(body), wux::UIElement(saucer)})
+        for (wux::UIElement e : {wux::UIElement(handle), wux::UIElement(body), wux::UIElement(saucer)})
             canvas.Children().Append(e);
     }
 
-    // Off: the outline only, as the neighbours draw. On: the whole cup filled in the accent,
-    // steaming.
+    // Off: the outline only. On: the same outline with the cup filled in the accent.
     void Paint(bool on, const Palette& c) {
-        auto ink = Brush(on ? c.accent : c.fg);
+        auto ink = Brush(c.fg);
         body.Stroke(ink);
-        body.Fill(on ? ink : Brush(0));
+        body.Fill(on ? Brush(c.accent) : Brush(0));
         handle.Stroke(ink);
-        steam.Stroke(ink);
-        steam.Visibility(on ? wux::Visibility::Visible : wux::Visibility::Collapsed);
         saucer.Fill(ink);
     }
 };

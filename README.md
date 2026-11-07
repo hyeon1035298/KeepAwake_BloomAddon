@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md)
 
-An add-on for the [Bloom](https://github.com/hyeon1035298/Bloom) launcher that keeps the computer awake from the Windows 11 taskbar. A coffee cup sits next to the clock: right-click it and the computer stays awake, right-click again and it may sleep. While it is on, the cup is filled in the accent colour picked in Bloom and steams.
+An add-on for the [Bloom](https://github.com/hyeon1035298/Bloom) launcher that keeps the computer awake from the Windows 11 taskbar. A coffee cup sits next to the clock: right-click it and the computer stays awake, right-click again and it may sleep. While it is on, the cup is filled with the accent colour picked in Bloom.
 
 - Right-click the cup to turn it on or off at once
 - Click it for a small window: until turned off, 30 minutes, 1 hour, 2 hours, or a number of minutes
