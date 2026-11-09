@@ -10,8 +10,40 @@
           "type": "choice",
           "default": "display",
           "options": [
-            { "value": "display", "name": { "ko": "화면도 켜 두기", "en": "Keep the screen on too", "ja": "画面もオンのまま", "zh": "屏幕也保持常亮" } },
-            { "value": "system", "name": { "ko": "시스템만 깨우기", "en": "Keep the system awake only", "ja": "システムだけを起こしておく", "zh": "仅保持系统唤醒" } }
+            {
+              "value": "display",
+              "name": { "ko": "화면도 켜 두기", "en": "Keep the screen on too", "ja": "画面もオンのまま", "zh": "屏幕也保持常亮" },
+              "easy": {
+                "name": { "ko": "화면과 PC", "en": "Screen and PC", "ja": "画面と PC", "zh": "屏幕和电脑" },
+                "picture": {
+                  "shapes": [
+                    { "box": [6, 6, 38, 25], "r": 3, "fill": "accent" },
+                    { "box": [6, 6, 38, 25], "r": 3, "stroke": "ink", "alpha": 0.45 },
+                    { "box": [21, 33, 8, 2.5], "r": 1, "alpha": 0.18 },
+                    { "box": [50, 6, 16, 31], "r": 3, "alpha": 0.05 },
+                    { "box": [50, 6, 16, 31], "r": 3, "stroke": "ink", "alpha": 0.45 },
+                    { "dot": [58, 12, 2], "fill": "accent" }
+                  ]
+                }
+              }
+            },
+            {
+              "value": "system",
+              "name": { "ko": "시스템만 깨우기", "en": "Keep the system awake only", "ja": "システムだけを起こしておく", "zh": "仅保持系统唤醒" },
+              "easy": {
+                "name": { "ko": "PC만", "en": "PC only", "ja": "PC だけ", "zh": "仅电脑" },
+                "picture": {
+                  "shapes": [
+                    { "box": [6, 6, 38, 25], "r": 3, "alpha": 0.55 },
+                    { "text": "z z", "at": [25, 18.5], "width": 30, "size": 9, "fill": "btn" },
+                    { "box": [21, 33, 8, 2.5], "r": 1, "alpha": 0.18 },
+                    { "box": [50, 6, 16, 31], "r": 3, "alpha": 0.05 },
+                    { "box": [50, 6, 16, 31], "r": 3, "stroke": "ink", "alpha": 0.45 },
+                    { "dot": [58, 12, 2], "fill": "accent" }
+                  ]
+                }
+              }
+            }
           ],
           "name": { "ko": "깨우기 방식", "en": "Keep awake", "ja": "起こしておく方法", "zh": "唤醒方式" },
           "about": {
@@ -19,6 +51,15 @@
             "en": "Whether the screen stays on too, or only the system stays awake. A change applies at once while on",
             "ja": "オンにしたとき画面もオンのままにするか、システムだけを起こしておくか。オンの間に変えるとすぐに反映されます",
             "zh": "开启时是屏幕也保持常亮，还是只保持系统唤醒。开启期间更改会立即生效"
+          },
+          "easy": {
+            "name": { "ko": "켜 둘 것", "en": "Keep on", "ja": "オンにしておくもの", "zh": "保持开启" },
+            "about": {
+              "ko": "PC만 켜 두면 화면은 평소처럼 꺼집니다",
+              "en": "With the PC only, the screen turns off as usual",
+              "ja": "PC だけのときは、画面はいつもどおりオフになります",
+              "zh": "仅保持电脑时，屏幕照常关闭"
+            }
           }
         },
         {
@@ -26,11 +67,31 @@
           "type": "choice",
           "default": "always",
           "options": [
-            { "value": "always", "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到关闭" } },
-            { "value": "m30", "name": { "ko": "30분", "en": "30 minutes", "ja": "30 分", "zh": "30 分钟" } },
-            { "value": "h1", "name": { "ko": "1시간", "en": "1 hour", "ja": "1 時間", "zh": "1 小时" } },
-            { "value": "h2", "name": { "ko": "2시간", "en": "2 hours", "ja": "2 時間", "zh": "2 小时" } },
-            { "value": "custom", "name": { "ko": "직접 입력", "en": "Custom", "ja": "直接入力", "zh": "自定义" } }
+            {
+              "value": "always",
+              "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到关闭" },
+              "easy": { "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到关闭" } }
+            },
+            {
+              "value": "m30",
+              "name": { "ko": "30분", "en": "30 minutes", "ja": "30 分", "zh": "30 分钟" },
+              "easy": { "name": { "ko": "30분", "en": "30 min", "ja": "30 分", "zh": "30 分钟" } }
+            },
+            {
+              "value": "h1",
+              "name": { "ko": "1시간", "en": "1 hour", "ja": "1 時間", "zh": "1 小时" },
+              "easy": { "name": { "ko": "1시간", "en": "1 hour", "ja": "1 時間", "zh": "1 小时" } }
+            },
+            {
+              "value": "h2",
+              "name": { "ko": "2시간", "en": "2 hours", "ja": "2 時間", "zh": "2 小时" },
+              "easy": { "name": { "ko": "2시간", "en": "2 hours", "ja": "2 時間", "zh": "2 小时" } }
+            },
+            {
+              "value": "custom",
+              "name": { "ko": "직접 입력", "en": "Custom", "ja": "直接入力", "zh": "自定义" },
+              "easy": { "name": { "ko": "직접 정한 시간", "en": "A time of my own", "ja": "自分で決めた時間", "zh": "自定义时间" } }
+            }
           ],
           "name": { "ko": "기본 시간", "en": "Default time", "ja": "既定の時間", "zh": "默认时长" },
           "about": {
@@ -38,7 +99,8 @@
             "en": "How long a right-click on the cup keeps it on. The window a click opens picks a time for one session",
             "ja": "カップを右クリックしてオンにしたときの時間。クリックで開くウィンドウではその都度選びます",
             "zh": "右键点击杯子开启时保持的时长。点击打开的窗口中可每次单独选择"
-          }
+          },
+          "easy": { "name": { "ko": "오른쪽 클릭으로 켜면", "en": "On with a right-click", "ja": "右クリックでオンにしたとき", "zh": "右键单击开启时" }, "about": "" }
         },
         {
           "key": "awake.minutes",
@@ -52,6 +114,12 @@
             "en": "The minutes for a custom default time, and where the window's custom field starts",
             "ja": "既定の時間が直接入力のときの分数。ウィンドウの直接入力欄もこの値から始まります",
             "zh": "默认时长为自定义时的分钟数，窗口中的自定义输入框也从此值开始"
+          },
+          "easy": {
+            "name": { "ko": "직접 정한 시간", "en": "A time of my own", "ja": "自分で決めた時間", "zh": "自定义时间" },
+            "about": "",
+            "when": { "key": "awake.duration", "is": "custom" },
+            "minutes": true
           }
         }
       ]
