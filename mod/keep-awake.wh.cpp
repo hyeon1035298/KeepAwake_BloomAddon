@@ -618,10 +618,12 @@ bool Post(std::function<void()> work) {
     g_pending++;
     bool queued = false;
     try {
-        queued = queue.TryEnqueue([work = std::move(work)] {
-            if (!g_unloading) {
+        queued = queue.TryEnqueue([work = std::move(work)]() mutable {
+            // What the work holds is let go of before the count drops, so Wh_ModUninit never
+            // returns while a destructor in this DLL is still to run on the taskbar thread.
+            if (auto run = std::move(work); !g_unloading) {
                 try {
-                    work();
+                    run();
                 } catch (...) {
                     Wh_Log(L"posted work failed: %08X", winrt::to_hresult());
                 }
@@ -956,6 +958,12 @@ struct Widget {
     std::wstring tip;
     const Palette* palette = nullptr;
     bool hover = false, fitted = false;
+    // XAML may keep the root after it leaves the tray; its handlers live in this DLL.
+    wux::UIElement::PointerEntered_revoker entered;
+    wux::UIElement::PointerExited_revoker exited;
+    wux::UIElement::Tapped_revoker tapped;
+    wux::UIElement::ContextRequested_revoker context;
+    wux::UIElement::RightTapped_revoker rightTapped;
 };
 std::vector<std::unique_ptr<Widget>> g_widgets;  // taskbar thread
 void TogglePanel(Widget& w);
@@ -1074,24 +1082,24 @@ std::unique_ptr<Widget> BuildWidget(HWND taskbar) {
     w->icon.canvas.VerticalAlignment(wux::VerticalAlignment::Center);
     w->root.Children().Append(w->icon.canvas);
     Widget* raw = w.get();
-    w->root.PointerEntered([raw](auto&&, auto&&) {
+    w->entered = w->root.PointerEntered(winrt::auto_revoke, [raw](auto&&, auto&&) {
         raw->hover = true;
         PaintWidget(*raw, true);
     });
-    w->root.PointerExited([raw](auto&&, auto&&) {
+    w->exited = w->root.PointerExited(winrt::auto_revoke, [raw](auto&&, auto&&) {
         raw->hover = false;
         PaintWidget(*raw, true);
     });
-    w->root.Tapped([raw](auto&&, wux::Input::TappedRoutedEventArgs const& args) {
+    w->tapped = w->root.Tapped(winrt::auto_revoke, [raw](auto&&, wux::Input::TappedRoutedEventArgs const& args) {
         args.Handled(true);
         TogglePanel(*raw);
     });
     // A right click turns it on or off at once, instead of the taskbar's own menu.
-    w->root.ContextRequested([](auto&&, wux::Input::ContextRequestedEventArgs const& args) {
+    w->context = w->root.ContextRequested(winrt::auto_revoke, [](auto&&, wux::Input::ContextRequestedEventArgs const& args) {
         args.Handled(true);
         ToggleFromMenu();
     });
-    w->root.RightTapped([](auto&&, wux::Input::RightTappedRoutedEventArgs const& args) {
+    w->rightTapped = w->root.RightTapped(winrt::auto_revoke, [](auto&&, wux::Input::RightTappedRoutedEventArgs const& args) {
         args.Handled(true);
         ToggleFromMenu();
     });
@@ -1106,12 +1114,22 @@ void RemoveWidget(Widget& w) {
     }
 }
 
+// For a widget going for good: its handlers first, then off the tray.
+void DropWidget(Widget& w) {
+    w.entered.revoke();
+    w.exited.revoke();
+    w.tapped.revoke();
+    w.context.revoke();
+    w.rightTapped.revoke();
+    RemoveWidget(w);
+}
+
 // Every taskbar gets one; ones whose tray was rebuilt go in again.
 void PlaceWidgets() {
     auto taskbars = Taskbars();
     std::erase_if(g_widgets, [&](auto& w) {
         bool gone = std::ranges::find(taskbars, w->taskbar) == taskbars.end();
-        if (gone) RemoveWidget(*w);
+        if (gone) DropWidget(*w);
         return gone;
     });
     for (HWND hwnd : taskbars) {
@@ -1546,6 +1564,9 @@ struct PanelState {
     wuxc::TextBlock status{nullptr}, big{nullptr};
     bool custom = false;  // the typed-in field is shown
     int typed = 45;
+    // Revoked before Hide: Closed comes after it, by when an unload may have freed the handler.
+    wuxc::Primitives::FlyoutBase::Opened_revoker opened;
+    wuxc::Primitives::FlyoutBase::Closed_revoker closed;
 };
 std::unique_ptr<PanelState> g_panel;
 uint64_t g_panelClosedAt = 0, g_menuAt = 0;
@@ -1711,6 +1732,8 @@ void ClosePanel() {
     HoldTaskbar(nullptr);
     ReleaseHandlers();
     UpdateTicker();
+    panel->opened.revoke();
+    panel->closed.revoke();
     try {
         if (panel->flyout) panel->flyout.Hide();
     } catch (...) {
@@ -1752,8 +1775,8 @@ void TogglePanel(Widget& w) {
     p.flyout.Content(p.bubble);
     p.flyout.ShouldConstrainToRootBounds(false);
     p.flyout.ShowMode(wuxc::Primitives::FlyoutShowMode::Standard);
-    p.flyout.Opened([](auto&&, auto&&) { AllowHostBackdrop(); });
-    p.flyout.Closed([](wf::IInspectable const& sender, auto&&) {
+    p.opened = p.flyout.Opened(winrt::auto_revoke, [](auto&&, auto&&) { AllowHostBackdrop(); });
+    p.closed = p.flyout.Closed(winrt::auto_revoke, [](wf::IInspectable const& sender, auto&&) {
         if (g_panel && g_panel->flyout == sender.try_as<wuxc::Flyout>()) {
             g_panel.reset();
             g_panelClosedAt = GetTickCount64();
@@ -1782,6 +1805,7 @@ void ToggleFromMenu() {
 // Once a second while on: the time left in the tooltip and the open window.
 winrt::Windows::System::DispatcherQueueTimer g_ticker{nullptr};
 winrt::Windows::System::DispatcherQueueTimer g_timer{nullptr};
+winrt::Windows::System::DispatcherQueueTimer::Tick_revoker g_tickerTick, g_timerTick;
 
 void UpdateTicker() {
     if (!g_ticker) return;
@@ -1812,7 +1836,7 @@ void Start() {
     RestoreState();
     g_ticker = g_queue.CreateTimer();
     g_ticker.Interval(std::chrono::seconds(1));
-    g_ticker.Tick([](auto&&, auto&&) {
+    g_tickerTick = g_ticker.Tick(winrt::auto_revoke, [](auto&&, auto&&) {
         if (g_unloading) return;
         PaintWidgets();
         RefreshTime();
@@ -1821,7 +1845,7 @@ void Start() {
     PlaceWidgets();
     g_timer = g_queue.CreateTimer();
     g_timer.Interval(std::chrono::seconds(5));
-    g_timer.Tick([](auto&&, auto&&) { Tick(); });
+    g_timerTick = g_timer.Tick(winrt::auto_revoke, [](auto&&, auto&&) { Tick(); });
     g_timer.Start();
 }
 
@@ -1829,6 +1853,7 @@ void Start() {
 // the add-on turned on again later starts asleep. An Explorer that crashes or restarts never
 // gets here, so its session is picked up by the next Explorer.
 void Stop() {
+    for (auto* tick : {&g_timerTick, &g_tickerTick}) tick->revoke();
     for (auto* timer : {&g_timer, &g_ticker}) {
         if (*timer) {
             timer->Stop();
@@ -1842,7 +1867,7 @@ void Stop() {
         Order(false, false, 0, g_s.id);
         SaveState();
     }
-    for (auto& w : g_widgets) RemoveWidget(*w);
+    for (auto& w : g_widgets) DropWidget(*w);
     g_widgets.clear();
     DestroyFlyoutWindow();
     g_queue = nullptr;
