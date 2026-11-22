@@ -390,12 +390,19 @@ wuxm::SolidColorBrush Brush(uint32_t argb) {
     return wuxm::SolidColorBrush(winrt::Windows::UI::Color{BYTE(argb >> 24), BYTE(argb >> 16), BYTE(argb >> 8), BYTE(argb)});
 }
 
-// A Thickness boxed by XAML itself. box_value boxes this XAML struct in this DLL, and a
-// resource dictionary that keeps the box would release it after the DLL is unloaded.
+// A Thickness or CornerRadius boxed by XAML itself. box_value boxes these XAML structs in
+// this DLL, and a style or resource dictionary that keeps the box would release it after
+// the DLL is unloaded.
 wf::IInspectable XamlBox(wux::Thickness t) {
     wuxc::Border b;
     b.Padding(t);
     return b.GetValue(wuxc::Border::PaddingProperty());
+}
+
+wf::IInspectable XamlBox(wux::CornerRadius r) {
+    wuxc::Border b;
+    b.CornerRadius(r);
+    return b.GetValue(wuxc::Border::CornerRadiusProperty());
 }
 
 uint32_t WithAlpha(uint32_t argb, BYTE alpha) {
@@ -495,11 +502,15 @@ wux::FrameworkElement TaskbarElement(HWND hwnd) {
         if (host[1]) std__Ref_count_base__Decref_Original(host[1]);
         return nullptr;
     }
-    // 48:83EC 28 | sub rsp,28 ; 48:83C1 48 | add rcx,48 <- the element's offset in TaskbarHost
-    size_t offset = 0x10;
+    // 48:83EC 28 | sub rsp,28 ; 48:83C1 48 | add rcx,48 <- the element's offset in TaskbarHost.
+    // On any other prologue the offset is unknown, and AddRef on a guessed slot could crash
+    // explorer, so there is no element.
     const BYTE* b = (const BYTE*)TaskbarHost_FrameHeight_Original;
-    if (b[0] == 0x48 && b[1] == 0x83 && b[2] == 0xEC && b[4] == 0x48 && b[5] == 0x83 && b[6] == 0xC1 && b[7] <= 0x7F)
-        offset = b[7];
+    if (!(b[0] == 0x48 && b[1] == 0x83 && b[2] == 0xEC && b[4] == 0x48 && b[5] == 0x83 && b[6] == 0xC1 && b[7] <= 0x7F)) {
+        std__Ref_count_base__Decref_Original(host[1]);
+        return nullptr;
+    }
+    size_t offset = b[7];
     wux::FrameworkElement element{nullptr};
     winrt::copy_from_abi(element, *(void**)((BYTE*)host[0] + offset));
     std__Ref_count_base__Decref_Original(host[1]);
@@ -1445,9 +1456,10 @@ int TypedNumber(const wuxc::TextBox& box, int fallback) {
 }
 
 // w8 field, height 28, radius 8: the number, then its unit in the faint colour. Enter in
-// the field runs `enter` after the number is taken.
+// the field runs `enter` after the number is taken. `takeOut` receives a function that
+// takes the number now, for controls that act on it without taking focus from the field.
 wuxc::Border NumberBox(int value, int lo, int hi, PCWSTR unit, std::function<void(int)> changed,
-                       std::function<void()> enter) {
+                       std::function<void()> enter, std::function<void()>* takeOut = nullptr) {
     const Palette& c = *g_c;
     auto field = Box(8, Ink(c, 8));
     field.Height(28);
@@ -1476,6 +1488,7 @@ wuxc::Border NumberBox(int value, int lo, int hi, PCWSTR unit, std::function<voi
         changed(v);
     };
     auto commit = [box, current, set] { set(TypedNumber(box, *current)); };
+    if (takeOut) *takeOut = commit;
     OnHover(
         field, [field, cp = &c] { field.BorderBrush(Brush(Ink(*cp, 25))); }, [field] { field.BorderBrush(Brush(0)); });
     OnClick(field, [box] {
@@ -1635,8 +1648,12 @@ void BuildPage() {
     p.status = Text(StatusLine(), 12, c.faint);
     names.Children().Append(p.status);
     head.Children().Append(InColumn(names, 1));
-    auto sw = MakeSwitch(g_s.on, [](bool on) {
+    // Takes what is typed in the minutes field. The switch and Start take no focus, so the
+    // field's LostFocus has not run when they are tapped.
+    auto takeTyped = std::make_shared<std::function<void()>>();
+    auto sw = MakeSwitch(g_s.on, [takeTyped](bool on) {
         if (!g_panel) return;
+        if (on && g_panel->custom && *takeTyped) (*takeTyped)();
         if (on) TurnOn(g_panel->custom ? g_panel->typed : g_config.minutes, g_s.display);
         else TurnOff();
     });
@@ -1667,14 +1684,15 @@ void BuildPage() {
         auto row = Columns({-1, 0, 0}, 8);
         row.Margin({2, 8, 0, 0});
         row.Children().Append(Text(T(L"몇 분 동안", L"For how many minutes"), 12, c.muted));
-        auto start = [] {
+        auto start = [takeTyped] {
+            if (*takeTyped) (*takeTyped)();
             if (g_panel) TurnOn(g_panel->typed, g_s.display);
         };
         row.Children().Append(InColumn(NumberBox(p.typed, 1, kMaxMinutes, T(L"분", L"min"),
                                                  [](int v) {
                                                      if (g_panel) g_panel->typed = v;
                                                  },
-                                                 start),
+                                                 start, takeTyped.get()),
                                        1));
         row.Children().Append(InColumn(MakeButton(T(L"시작", L"Start"), start), 2));
         page.Children().Append(row);
@@ -1721,10 +1739,10 @@ wux::Style BarePresenter() {
     auto set = [&](const wux::DependencyProperty& property, const wf::IInspectable& value) {
         setters.Append(wux::Setter(property, value));
     };
-    set(wuxc::Control::PaddingProperty(), box_value(wux::Thickness{}));
+    set(wuxc::Control::PaddingProperty(), XamlBox(wux::Thickness{}));
     set(wuxc::Control::BackgroundProperty(), Brush(0));
-    set(wuxc::Control::BorderThicknessProperty(), box_value(wux::Thickness{}));
-    set(wuxc::Control::CornerRadiusProperty(), box_value(wux::CornerRadius{}));
+    set(wuxc::Control::BorderThicknessProperty(), XamlBox(wux::Thickness{}));
+    set(wuxc::Control::CornerRadiusProperty(), XamlBox(wux::CornerRadius{}));
     set(wuxc::FlyoutPresenter::IsDefaultShadowEnabledProperty(), box_value(false));
     set(wux::FrameworkElement::MinWidthProperty(), box_value(0.0));
     set(wux::FrameworkElement::MinHeightProperty(), box_value(0.0));
