@@ -858,11 +858,11 @@ void RestoreState() {
 // "1시간 23분", "45분", "1분 미만".
 std::wstring Duration(int64_t ms) {
     int64_t minutes = (ms + 59999) / 60000;
-    if (ms < 60000) return T(L"1분 미만", L"under a minute");
+    if (ms < 60000) return T(L"1분 미만", L"< 1 min");
     int64_t h = minutes / 60, m = minutes % 60;
     if (!h) return Format(T(L"%lld분", L"%lld min"), m);
-    if (!m) return Format(T(L"%lld시간", L"%lld h"), h);
-    return Format(T(L"%lld시간 %lld분", L"%lld h %lld min"), h, m);
+    if (!m) return Format(T(L"%lld시간", L"%lldh"), h);
+    return Format(T(L"%lld시간 %lld분", L"%lld hr %lld min"), h, m);
 }
 
 // "1:23:45", for the window while it is open.
@@ -873,7 +873,7 @@ std::wstring Clock(int64_t ms) {
 }
 
 std::wstring ModeName(bool display) {
-    return display ? T(L"화면도 켜 둠", L"screen kept on") : T(L"시스템만 깨움", L"system only");
+    return display ? T(L"화면도 켜 둠", L"Keeping screen on") : T(L"시스템만 깨움", L"Keeping system awake");
 }
 
 // ============================================================================
@@ -1058,12 +1058,12 @@ std::wstring Tip() {
     std::wstring head = std::wstring(T(L"커피", L"Coffee")) + L": ";
     if (!g_s.on)
         return head + T(L"꺼짐\n클릭: 시간과 방식 · 오른쪽 클릭: 켜기",
-                        L"off\nClick: time and mode · Right-click: turn on");
+                        L"Off\nClick: Duration & mode · Right-click: Turn on");
     int64_t left = Left();
-    std::wstring when = left < 0 ? std::wstring(T(L"끌 때까지", L"until turned off"))
+    std::wstring when = left < 0 ? std::wstring(T(L"끌 때까지", L"Until turned off"))
                                  : Format(T(L"%s 남음", L"%s left"), Duration(left).c_str());
     return head + ModeName(g_s.display) + L", " + when + L"\n" +
-           T(L"클릭: 시간과 방식 · 오른쪽 클릭: 끄기", L"Click: time and mode · Right-click: turn off");
+           T(L"클릭: 시간과 방식 · 오른쪽 클릭: 끄기", L"Click: Duration & mode · Right-click: Turn off");
 }
 
 void PaintWidget(Widget& w, bool force) {
@@ -1609,7 +1609,7 @@ std::wstring StatusLine() {
 }
 
 std::wstring BigLine() {
-    if (!g_s.on) return T(L"잠들 수 있음", L"Free to sleep");
+    if (!g_s.on) return T(L"잠들 수 있음", L"Can sleep");
     int64_t left = Left();
     return left < 0 ? std::wstring(T(L"끌 때까지 깨어 있음", L"Awake until turned off"))
                     : Format(T(L"%s 남음", L"%s left"), Clock(left).c_str());
@@ -1670,9 +1670,9 @@ void BuildPage() {
     page.Children().Append(bigBox);
 
     // How long: picking one starts it, or starts it again from now.
-    page.Children().Append(SectionHead(T(L"시간", L"How long")));
-    auto times = MakeSegment({T(L"계속", L"Always"), T(L"30분", L"30 min"), T(L"1시간", L"1 h"),
-                              T(L"2시간", L"2 h"), T(L"직접", L"Custom")},
+    page.Children().Append(SectionHead(T(L"시간", L"Duration")));
+    auto times = MakeSegment({T(L"계속", L"Indefinitely"), T(L"30분", L"30 min"), T(L"1시간", L"1 hr"),
+                              T(L"2시간", L"2 hr"), T(L"직접", L"Custom")},
                              ChoiceIndex(), [](int i) {
                                  if (!g_panel) return;
                                  g_panel->custom = kChoices[i] < 0;
@@ -1683,7 +1683,7 @@ void BuildPage() {
     if (p.custom) {
         auto row = Columns({-1, 0, 0}, 8);
         row.Margin({2, 8, 0, 0});
-        row.Children().Append(Text(T(L"몇 분 동안", L"For how many minutes"), 12, c.muted));
+        row.Children().Append(Text(T(L"몇 분 동안", L"Duration in minutes"), 12, c.muted));
         auto start = [takeTyped] {
             if (*takeTyped) (*takeTyped)();
             if (g_panel) TurnOn(g_panel->typed, g_s.display);
@@ -1700,15 +1700,15 @@ void BuildPage() {
 
     // How: the screen too, or the system only. Applies to the running session; the next
     // one starts from the setting in Bloom again.
-    page.Children().Append(SectionHead(T(L"깨우기 방식", L"Keep awake")));
-    auto mode = MakeSegment({T(L"화면도 켜 두기", L"Screen too"), T(L"시스템만", L"System only")},
+    page.Children().Append(SectionHead(T(L"깨우기 방식", L"Keep-awake mode")));
+    auto mode = MakeSegment({T(L"화면도 켜 두기", L"Keep screen on"), T(L"시스템만", L"System only")},
                             g_s.display ? 0 : 1, [](int i) { SetDisplay(i == 0); });
     page.Children().Append(mode.root);
     page.Children().Append([&] {
         auto t = Wrapped(g_s.display ? T(L"화면이 꺼지거나 잠기지 않고, PC도 잠들지 않습니다.",
-                                         L"The screen neither turns off nor locks, and the PC does not sleep.")
+                                         L"Prevents the screen from turning off or locking, and keeps your PC awake.")
                                      : T(L"PC는 잠들지 않지만 화면은 평소처럼 꺼질 수 있습니다.",
-                                         L"The PC does not sleep, but the screen may turn off as usual."),
+                                         L"Keeps your PC awake, while allowing the screen to turn off as usual."),
                          12, c.faint);
         t.Margin({2, 8, 2, 2});
         return t;

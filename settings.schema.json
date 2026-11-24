@@ -12,9 +12,9 @@
           "options": [
             {
               "value": "display",
-              "name": { "ko": "화면도 켜 두기", "en": "Keep the screen on too", "ja": "画面もオンのまま", "zh": "屏幕也保持常亮" },
+              "name": { "ko": "화면도 켜 두기", "en": "Keep screen on", "ja": "画面も点灯したままにする", "zh": "保持屏幕常亮" },
               "easy": {
-                "name": { "ko": "화면과 PC", "en": "Screen and PC", "ja": "画面と PC", "zh": "屏幕和电脑" },
+                "name": { "ko": "화면과 PC", "en": "Screen and PC", "ja": "画面と PC", "zh": "屏幕与电脑" },
                 "picture": {
                   "shapes": [
                     { "box": [6, 6, 38, 25], "r": 3, "fill": "accent" },
@@ -29,9 +29,9 @@
             },
             {
               "value": "system",
-              "name": { "ko": "시스템만 깨우기", "en": "Keep the system awake only", "ja": "システムだけを起こしておく", "zh": "仅保持系统唤醒" },
+              "name": { "ko": "시스템만 깨우기", "en": "Keep system awake only", "ja": "システムのみスリープ防止", "zh": "仅保持系统唤醒" },
               "easy": {
-                "name": { "ko": "PC만", "en": "PC only", "ja": "PC だけ", "zh": "仅电脑" },
+                "name": { "ko": "PC만", "en": "PC only", "ja": "PC のみ", "zh": "仅电脑" },
                 "picture": {
                   "shapes": [
                     { "box": [6, 6, 38, 25], "r": 3, "alpha": 0.55 },
@@ -45,20 +45,20 @@
               }
             }
           ],
-          "name": { "ko": "깨우기 방식", "en": "Keep awake", "ja": "起こしておく方法", "zh": "唤醒方式" },
+          "name": { "ko": "깨우기 방식", "en": "Keep-awake mode", "ja": "スリープ防止モード", "zh": "唤醒模式" },
           "about": {
             "ko": "켤 때 화면도 켜 둘지, 시스템만 깨어 있게 할지. 켜져 있는 동안 바꾸면 바로 적용됩니다",
-            "en": "Whether the screen stays on too, or only the system stays awake. A change applies at once while on",
-            "ja": "オンにしたとき画面もオンのままにするか、システムだけを起こしておくか。オンの間に変えるとすぐに反映されます",
-            "zh": "开启时是屏幕也保持常亮，还是只保持系统唤醒。开启期间更改会立即生效"
+            "en": "Whether to keep the screen on as well or only keep the system awake. Changes apply immediately while active",
+            "ja": "オンにした時に画面も点灯したままにするか、システムのみスリープを防ぐかを選びます。有効中に変更するとすぐに適用されます",
+            "zh": "开启时是同时保持屏幕常亮，还是仅保持系统唤醒。开启期间更改将立即生效"
           },
           "easy": {
-            "name": { "ko": "켜 둘 것", "en": "Keep on", "ja": "オンにしておくもの", "zh": "保持开启" },
+            "name": { "ko": "켜 둘 것", "en": "Keep awake", "ja": "維持する対象", "zh": "保持唤醒项" },
             "about": {
               "ko": "PC만 켜 두면 화면은 평소처럼 꺼집니다",
-              "en": "With the PC only, the screen turns off as usual",
-              "ja": "PC だけのときは、画面はいつもどおりオフになります",
-              "zh": "仅保持电脑时，屏幕照常关闭"
+              "en": "If set to PC only, the screen turns off as usual",
+              "ja": "PC のみにすると、画面は通常どおり消灯します",
+              "zh": "若仅保持电脑唤醒，屏幕将照常关闭"
             }
           }
         },
@@ -69,38 +69,38 @@
           "options": [
             {
               "value": "always",
-              "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到关闭" },
-              "easy": { "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到关闭" } }
+              "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到手动关闭" },
+              "easy": { "name": { "ko": "끌 때까지", "en": "Until turned off", "ja": "オフにするまで", "zh": "直到手动关闭" } }
             },
             {
               "value": "m30",
-              "name": { "ko": "30분", "en": "30 minutes", "ja": "30 分", "zh": "30 分钟" },
-              "easy": { "name": { "ko": "30분", "en": "30 min", "ja": "30 分", "zh": "30 分钟" } }
+              "name": { "ko": "30분", "en": "30 min", "ja": "30分", "zh": "30 分钟" },
+              "easy": { "name": { "ko": "30분", "en": "30 min", "ja": "30分", "zh": "30 分钟" } }
             },
             {
               "value": "h1",
-              "name": { "ko": "1시간", "en": "1 hour", "ja": "1 時間", "zh": "1 小时" },
-              "easy": { "name": { "ko": "1시간", "en": "1 hour", "ja": "1 時間", "zh": "1 小时" } }
+              "name": { "ko": "1시간", "en": "1 hr", "ja": "1時間", "zh": "1 小时" },
+              "easy": { "name": { "ko": "1시간", "en": "1 hr", "ja": "1時間", "zh": "1 小时" } }
             },
             {
               "value": "h2",
-              "name": { "ko": "2시간", "en": "2 hours", "ja": "2 時間", "zh": "2 小时" },
-              "easy": { "name": { "ko": "2시간", "en": "2 hours", "ja": "2 時間", "zh": "2 小时" } }
+              "name": { "ko": "2시간", "en": "2 hr", "ja": "2時間", "zh": "2 小时" },
+              "easy": { "name": { "ko": "2시간", "en": "2 hr", "ja": "2時間", "zh": "2 小时" } }
             },
             {
               "value": "custom",
-              "name": { "ko": "직접 입력", "en": "Custom", "ja": "直接入力", "zh": "自定义" },
-              "easy": { "name": { "ko": "직접 정한 시간", "en": "A time of my own", "ja": "自分で決めた時間", "zh": "自定义时间" } }
+              "name": { "ko": "직접 입력", "en": "Custom", "ja": "カスタム", "zh": "自定义" },
+              "easy": { "name": { "ko": "직접 정한 시간", "en": "Custom duration", "ja": "指定した時間", "zh": "自定义时长" } }
             }
           ],
-          "name": { "ko": "기본 시간", "en": "Default time", "ja": "既定の時間", "zh": "默认时长" },
+          "name": { "ko": "기본 시간", "en": "Default duration", "ja": "標準の時間", "zh": "默认时长" },
           "about": {
             "ko": "커피 아이콘을 오른쪽 클릭해 켤 때 얼마나 켜 둘지. 클릭하면 뜨는 창에서는 그때그때 고릅니다",
-            "en": "How long a right-click on the cup keeps it on. The window a click opens picks a time for one session",
-            "ja": "カップを右クリックしてオンにしたときの時間。クリックで開くウィンドウではその都度選びます",
-            "zh": "右键点击杯子开启时保持的时长。点击打开的窗口中可每次单独选择"
+            "en": "How long to stay on when turned on by right-clicking the coffee icon. You can pick any duration from the popup window on left-click",
+            "ja": "コーヒーアイコンを右クリックしてオンにした時の持続時間です。クリックで開くウィンドウからはその都度選べます",
+            "zh": "右键点击咖啡图标开启时的持续时间。左键点击弹出的窗口中可随时选择时长"
           },
-          "easy": { "name": { "ko": "오른쪽 클릭으로 켜면", "en": "On with a right-click", "ja": "右クリックでオンにしたとき", "zh": "右键单击开启时" }, "about": "" }
+          "easy": { "name": { "ko": "오른쪽 클릭으로 켜면", "en": "When turned on via right-click", "ja": "右クリックでオンにした時", "zh": "右键点击开启时" }, "about": "" }
         },
         {
           "key": "awake.minutes",
@@ -108,15 +108,15 @@
           "default": 45,
           "min": 1,
           "max": 1440,
-          "name": { "ko": "직접 입력 시간(분)", "en": "Custom time (min)", "ja": "直接入力の時間 (min)", "zh": "自定义时长 (min)" },
+          "name": { "ko": "직접 입력 시간(분)", "en": "Custom duration (min)", "ja": "カスタム時間 (分)", "zh": "自定义时长 (分钟)" },
           "about": {
             "ko": "기본 시간이 직접 입력일 때의 분. 창의 직접 입력 칸도 이 값에서 시작합니다",
-            "en": "The minutes for a custom default time, and where the window's custom field starts",
-            "ja": "既定の時間が直接入力のときの分数。ウィンドウの直接入力欄もこの値から始まります",
-            "zh": "默认时长为自定义时的分钟数，窗口中的自定义输入框也从此值开始"
+            "en": "Minutes used when default duration is set to Custom. The custom input field in the window also starts with this value",
+            "ja": "標準の時間がカスタムの時の分数です。ウィンドウのカスタム入力欄もこの値から始まります",
+            "zh": "默认时长设为自定义时的分钟数。窗口中的自定义输入框也以此值为初始值"
           },
           "easy": {
-            "name": { "ko": "직접 정한 시간", "en": "A time of my own", "ja": "自分で決めた時間", "zh": "自定义时间" },
+            "name": { "ko": "직접 정한 시간", "en": "Custom duration", "ja": "指定した時間", "zh": "自定义时长" },
             "about": "",
             "when": { "key": "awake.duration", "is": "custom" },
             "minutes": true
@@ -126,7 +126,7 @@
     },
     {
       "id": "pill",
-      "name": { "ko": "모양", "en": "Look", "ja": "外観", "zh": "外观" },
+      "name": { "ko": "모양", "en": "Appearance", "ja": "外観", "zh": "外观" },
       "items": [
         {
           "key": "pill.theme",
@@ -140,9 +140,9 @@
           "name": { "ko": "테마", "en": "Theme", "ja": "テーマ", "zh": "主题" },
           "about": {
             "ko": "위젯과 창의 라이트·다크. Bloom 애드온으로 쓰면 Bloom의 테마를 따릅니다",
-            "en": "Light or dark for the widget and its window. As a Bloom add-on it follows Bloom's theme",
-            "ja": "ウィジェットとウィンドウのライト・ダーク。Bloom のアドオンとして使うと Bloom のテーマに従います",
-            "zh": "小组件及其窗口的浅色或深色。作为 Bloom 加载项使用时跟随 Bloom 的主题"
+            "en": "Light or dark theme for the widget and window. When used as a Bloom add-on, it follows Bloom's theme",
+            "ja": "ウィジェットとウィンドウのライト・ダークテーマ。Bloom アドオンとして使用する場合は Bloom のテーマに従います",
+            "zh": "小组件与窗口的浅色或深色主题。作为 Bloom 插件使用时将跟随 Bloom 的主题"
           }
         },
         {
@@ -152,9 +152,9 @@
           "name": { "ko": "유리 효과", "en": "Glass effect", "ja": "ガラス効果", "zh": "玻璃效果" },
           "about": {
             "ko": "끄면 창이 블러 없이 테마 색으로 칠해집니다",
-            "en": "When off, the window is filled in the theme's color without blur",
-            "ja": "オフにするとウィンドウをぼかさずテーマの色で塗ります",
-            "zh": "关闭后窗口不模糊，以主题颜色填充"
+            "en": "When disabled, the window uses a solid theme color without blur",
+            "ja": "オフにすると、ウィンドウはぼかしなしでテーマ色で塗りつぶされます",
+            "zh": "关闭后窗口无模糊效果，直接填充主题色"
           }
         }
       ]
